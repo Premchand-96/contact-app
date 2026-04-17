@@ -1,40 +1,20 @@
-pipeline {
-    agent any
+stage('Build & Deploy') {
+    steps {
+        sh '''
+        # Install tools
+        sudo npm install -g pm2 http-server
 
-    stages {
+        # Backend
+        cd backend
+        sudo -u ec2-user pm2 delete backend || true
+        sudo -u ec2-user pm2 start server.js --name backend
 
-        stage('Checkout Code') {
-            steps {
-                git 'https://github.com/Premchand-96/contact-app.git'
-            }
-        }
+        # Frontend
+        cd ../frontend
+        sudo -u ec2-user pm2 delete frontend || true
+        sudo -u ec2-user pm2 start "npx http-server -p 8081" --name frontend
 
-        stage('Install Backend') {
-            steps {
-                dir('backend') {
-                    sh 'npm install'
-                }
-            }
-        }
-
-        stage('Deploy Backend') {
-            steps {
-                sh '''
-                pkill -f server.js || true
-                cd backend
-                nohup node server.js &
-                '''
-            }
-        }
-
-        stage('Deploy Frontend') {
-            steps {
-                sh '''
-                pkill -f http.server || true
-                cd frontend
-                nohup python3 -m http.server 8081 --bind 0.0.0.0 &
-                '''
-            }
-        }
+        sudo -u ec2-user pm2 save
+        '''
     }
 }
