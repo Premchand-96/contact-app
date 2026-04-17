@@ -3,14 +3,13 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                git branch: 'main',
-                url: 'https://github.com/Premchand-96/contact-app.git'
+                git 'https://github.com/Premchand-96/contact-app.git'
             }
         }
 
-        stage('Build Backend') {
+        stage('Install Backend Dependencies') {
             steps {
                 dir('backend') {
                     sh 'npm install'
@@ -18,18 +17,12 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            steps {
-                sh 'echo Testing Passed'
-            }
-        }
-
         stage('Deploy Backend') {
             steps {
                 sh '''
-                pkill node || true
+                pkill -f server.js || true
                 cd backend
-                nohup node server.js > app.log 2>&1 &
+                nohup node server.js &
                 '''
             }
         }
@@ -37,7 +30,9 @@ pipeline {
         stage('Deploy Frontend') {
             steps {
                 sh '''
-                sudo cp frontend/index.html /var/www/html/index.html || true
+                pkill -f http.server || true
+                cd frontend
+                nohup python3 -m http.server 8081 --bind 0.0.0.0 &
                 '''
             }
         }
