@@ -18,51 +18,33 @@ pipeline {
             }
         }
 
-        stage('Stop Old PM2 Processes') {
-            steps {
-                sh '''
-                echo "Stopping old PM2 applications..."
-
-                pm2 delete backend || true
-                pm2 delete frontend || true
-
-                pm2 save
-                sleep 5
-                '''
-            }
-        }
-
-        stage('Start Backend') {
+        stage('Deploy Backend with PM2') {
             steps {
                 dir('backend') {
                     sh '''
-                    echo "Starting backend..."
+                    # Stop old backend if exists
+                    pm2 delete backend || true
 
+                    # Start backend
                     pm2 start server.js --name backend
 
                     pm2 save
-                    sleep 5
-
-                    pm2 list
                     '''
                 }
             }
         }
 
-        stage('Start Frontend') {
+        stage('Deploy Frontend with PM2') {
             steps {
                 dir('frontend') {
                     sh '''
-                    echo "Starting frontend..."
-
+                    # Stop old frontend if exists
                     pm2 delete frontend || true
 
-                    pm2 start http-server --name frontend -- . -p 8081 -a 0.0.0.0
+                    # Start frontend on port 8081
+                    pm2 start http-server --name frontend -- -p 8081
 
                     pm2 save
-                    sleep 5
-
-                    pm2 list
                     '''
                 }
             }
@@ -71,10 +53,8 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh '''
-                echo "Checking Backend API..."
+                pm2 list
                 curl http://localhost:3000/contacts
-
-                echo "Checking Frontend..."
                 curl http://localhost:8081
                 '''
             }
