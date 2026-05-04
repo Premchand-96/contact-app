@@ -1,7 +1,14 @@
 pipeline {
-    agent any
+    agent { label 'build-agent' }
 
     stages {
+
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main',
+                url: 'https://github.com/Premchand-96/contact-app.git'
+            }
+        }
 
         stage('Install Backend Dependencies') {
             steps {
@@ -11,26 +18,54 @@ pipeline {
             }
         }
 
-        stage('Deploy with PM2') {
+        stage('Install Frontend Dependencies') {
             steps {
                 sh '''
-                # Install PM2 & http-server
-                sudo npm install -g pm2 http-server
+                sudo npm install -g http-server
+                '''
+            }
+        }
 
-                # Kill old processes (ignore errors)
-                sudo -u ec2-user pm2 delete backend || true
-                sudo -u ec2-user pm2 delete frontend || true
+        stage('Deploy Backend with PM2') {
+            steps {
+                dir('backend') {
+                    sh '''
+                    sudo npm install -g pm2
 
-                # Start Backend
-                cd backend
-                sudo -u ec2-user pm2 start server.js --name backend
+                    # Stop old backend if exists
+                    pm2 delete backend || true
 
-                # Start Frontend
-                cd ../frontend
-                sudo -u ec2-user pm2 start "npx http-server -p 8081" --name frontend
+                    # Start backend
+                    pm2 start server.js --name backend
 
-                # Save PM2
-                sudo -u ec2-user pm2 save
+                    pm2 save
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Frontend with PM2') {
+            steps {
+                dir('frontend') {
+                    sh '''
+                    # Stop old frontend if exists
+                    pm2 delete frontend || true
+
+                    # Start frontend on port 8081
+                    pm2 start "http-server -p 8081" --name frontend --interpreter bash
+
+                    pm2 save
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                pm2 list
+                curl http://localhost:3000/contacts
+                curl http://localhost:8081
                 '''
             }
         }
