@@ -27,7 +27,6 @@ pipeline {
                 pm2 delete frontend || true
 
                 pm2 save
-
                 sleep 5
                 '''
             }
@@ -42,7 +41,6 @@ pipeline {
                     pm2 start server.js --name backend
 
                     pm2 save
-
                     sleep 5
 
                     pm2 list
@@ -57,10 +55,11 @@ pipeline {
                     sh '''
                     echo "Starting frontend..."
 
-                    pm2 start http-server --name frontend -- -p 8081
+                    pm2 delete frontend || true
+
+                    pm2 start http-server --name frontend -- . -p 8081 -a 0.0.0.0
 
                     pm2 save
-
                     sleep 5
 
                     pm2 list
