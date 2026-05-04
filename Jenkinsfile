@@ -18,20 +18,10 @@ pipeline {
             }
         }
 
-        stage('Install Frontend Dependencies') {
-            steps {
-                sh '''
-                sudo npm install -g http-server
-                '''
-            }
-        }
-
         stage('Deploy Backend with PM2') {
             steps {
                 dir('backend') {
                     sh '''
-                    sudo npm install -g pm2
-
                     # Stop old backend if exists
                     pm2 delete backend || true
 
@@ -52,7 +42,7 @@ pipeline {
                     pm2 delete frontend || true
 
                     # Start frontend on port 8081
-                    pm2 start "http-server -p 8081" --name frontend --interpreter bash
+                    pm2 start http-server --name frontend -- -p 8081
 
                     pm2 save
                     '''
