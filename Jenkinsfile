@@ -18,24 +18,17 @@ pipeline {
             }
         }
 
-        stage('Kill Old Processes') {
+        stage('Stop Old PM2 Processes') {
             steps {
                 sh '''
-                echo "Stopping old processes..."
+                echo "Stopping old PM2 applications..."
 
-                # Kill processes running on ports
-                sudo fuser -k 3000/tcp || true
-                sudo fuser -k 8081/tcp || true
-
-                # Kill old node/http-server processes
-                pkill -f "node server.js" || true
-                pkill -f "http-server" || true
-
-                # Delete old PM2 apps
                 pm2 delete backend || true
                 pm2 delete frontend || true
 
                 pm2 save
+
+                sleep 5
                 '''
             }
         }
@@ -44,8 +37,15 @@ pipeline {
             steps {
                 dir('backend') {
                     sh '''
+                    echo "Starting backend..."
+
                     pm2 start server.js --name backend
+
                     pm2 save
+
+                    sleep 5
+
+                    pm2 list
                     '''
                 }
             }
@@ -55,8 +55,15 @@ pipeline {
             steps {
                 dir('frontend') {
                     sh '''
+                    echo "Starting frontend..."
+
                     pm2 start http-server --name frontend -- -p 8081
+
                     pm2 save
+
+                    sleep 5
+
+                    pm2 list
                     '''
                 }
             }
@@ -65,10 +72,7 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh '''
-                echo "Checking PM2 processes..."
-                pm2 list
-
-                echo "Checking Backend..."
+                echo "Checking Backend API..."
                 curl http://localhost:3000/contacts
 
                 echo "Checking Frontend..."
